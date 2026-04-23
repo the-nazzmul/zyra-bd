@@ -1,5 +1,6 @@
 {
   "compilerOptions": {
+    "baseUrl": ".",
     "composite": true,
     "declarationMap": true,
     "emitDeclarationOnly": true,
@@ -16,6 +17,11 @@
     "skipLibCheck": true,
     "strict": true,
     "target": "es2022",
-    "customConditions": ["@zyra-bd/source"]
+    "customConditions": ["@zyra-bd/source"],
+    "paths": {
+      "@zyra-bd/error-handler": ["packages/error-handler/index.ts"],
+      "@zyra-bd/prisma": ["packages/libs/prisma/index.ts"],
+      "@zyra-bd/redis": ["packages/libs/redis/index.ts"]
+    }
   }
 }
