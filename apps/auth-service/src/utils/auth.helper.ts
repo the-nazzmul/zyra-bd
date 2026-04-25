@@ -2,7 +2,6 @@ import { ValidationError } from '@zyra-bd/error-handler';
 import crypto from 'crypto';
 import redis from '@zyra-bd/redis';
 import { sendEmail } from './send-mail';
-import { NextFunction } from 'express';
 
 const isOtpRateLimitDisabled = process.env.DISABLE_OTP_RATE_LIMIT === 'true';
 
@@ -13,6 +12,8 @@ export const ValidateRegistrationData = (
   const { name, email, password, phone, country } = data;
 
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const passwordRegex =
+    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
 
   if (
     !name ||
@@ -26,38 +27,37 @@ export const ValidateRegistrationData = (
   if (!emailRegex.test(email)) {
     throw new ValidationError('Invalid email format');
   }
+
+  if (!passwordRegex.test(password)) {
+    throw new ValidationError(
+      'Password must contain at least 8 characters, one uppercase letter, one lowercase letter, one number and one special character',
+    );
+  }
 };
 
-export const CheckOtpRestrictions = async (
-  email: string,
-  next: NextFunction,
-) => {
+export const CheckOtpRestrictions = async (email: string) => {
   if (isOtpRateLimitDisabled) {
     return;
   }
 
   if (await redis.get(`otp_lock:${email}`)) {
-    return next(
-      new ValidationError(
-        'Too many OTP requests. Please try again after 30 minutes',
-      ),
+    throw new ValidationError(
+      'Too many OTP requests. Please try again after 30 minutes',
     );
   }
   if (await redis.get(`otp_spam_lock:${email}`)) {
-    return next(
-      new ValidationError(
-        'Too many OTP requests. Please try again after 1 hour',
-      ),
+    throw new ValidationError(
+      'Too many OTP requests. Please try again after 1 hour',
     );
   }
   if (await redis.get(`otp_cooldown:${email}`)) {
-    return next(
-      new ValidationError('Please wait 1 minute before requesting a new OTP'),
+    throw new ValidationError(
+      'Please wait 1 minute before requesting a new OTP',
     );
   }
 };
 
-export const trackOtpRequest = async (email: string, next: NextFunction) => {
+export const trackOtpRequest = async (email: string) => {
   if (isOtpRateLimitDisabled) {
     return;
   }
@@ -67,10 +67,8 @@ export const trackOtpRequest = async (email: string, next: NextFunction) => {
 
   if (optRequests >= 2) {
     await redis.set(`otp_spam_lock:${email}`, 'locked', 'EX', 3600);
-    return next(
-      new ValidationError(
-        'Too many OTP requests. Please try again after 1 hour',
-      ),
+    throw new ValidationError(
+      'Too many OTP requests. Please try again after 1 hour',
     );
   }
 
@@ -96,4 +94,32 @@ export const SendOtp = async (
   //set this OTP in redis with email with 5 minutes expiration
   await redis.set(`otp:${email}`, otp, 'EX', 300);
   await redis.set(`otp_cooldown:${email}`, 'true', 'EX', 60);
+};
+
+export const verifyOtp = async (email: string, otp: string | number) => {
+  const storedOtp = await redis.get(`otp:${email}`);
+
+  if (!storedOtp) {
+    throw new ValidationError('Invalid or expired OTP');
+  }
+
+  const failedAttempts = parseInt(
+    (await redis.get(`otp_attempts:${email}`)) || '0',
+  );
+
+  if (storedOtp !== String(otp)) {
+    if (failedAttempts >= 2) {
+      await redis.set(`otp_spam_lock:${email}`, 'locked', 'EX', 1800); //lock for 30 minutes
+      await redis.del(`otp:${email}`, `otp_attempts:${email}`);
+
+      throw new ValidationError(
+        'Too many failed attempts. Now your account is locked for 30 minutes. Please try again later',
+      );
+    }
+    await redis.set(`otp_attempts:${email}`, failedAttempts + 1, 'EX', 300);
+    throw new ValidationError(
+      `Invalid OTP. You have ${2 - failedAttempts} attempts left`,
+    );
+  }
+  await redis.del(`otp:${email}`, `otp_attempts:${email}`);
 };

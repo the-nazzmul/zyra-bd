@@ -3,12 +3,13 @@
   "version": "0.0.0",
   "license": "MIT",
   "scripts": {
-    "build:prisma-lib": "tsc \"packages/libs/prisma/index.ts\" --module commonjs --target es2022 --lib es2022 --types node --esModuleInterop --moduleResolution node --declaration --declarationMap false --outDir \"packages/libs/prisma/dist\"",
-    "dev": "npm run build:prisma-lib && npx nx run-many --target=serve --all"
+    "dev": "npx nx run-many --target=serve --all --no-tui",
+    "auth-docs": "node apps/auth-service/src/swagger.js"
   },
   "private": true,
   "dependencies": {
     "@prisma/client": "^6.19.0",
+    "argon2": "^0.44.0",
     "axios": "^1.15.2",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
@@ -18,6 +19,7 @@
     "express-http-proxy": "^2.1.2",
     "express-rate-limit": "^8.3.2",
     "ioredis": "^5.10.1",
+    "jsonwebtoken": "^9.0.3",
     "morgan": "^1.10.1",
     "nodemailer": "^8.0.5",
     "prisma": "^6.19.0",

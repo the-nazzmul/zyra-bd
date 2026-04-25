@@ -6,10 +6,10 @@
     "version": "1.0.0"
   },
   "host": "localhost:8000",
-  "basePath": "/",
+  "basePath": "/api/v1",
   "schemes": ["http"],
   "paths": {
-    "/api/user-registration": {
+    "/user-registration": {
       "post": {
         "description": "",
         "parameters": [
@@ -20,13 +20,10 @@
               "type": "object",
               "properties": {
                 "name": {
-                  "example": "Nazmul"
+                  "example": "John Doe"
                 },
                 "email": {
-                  "example": "nazzmul.dev@gmail.com"
-                },
-                "password": {
-                  "example": "password"
+                  "example": "john.doe@example.com"
                 }
               }
             }
@@ -35,6 +32,39 @@
         "responses": {
           "200": {
             "description": "OK"
+          }
+        }
+      }
+    },
+    "/verify-user": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "email": {
+                  "example": "john.doe@example.com"
+                },
+                "otp": {
+                  "example": "1234"
+                },
+                "password": {
+                  "example": "Password123!@"
+                },
+                "name": {
+                  "example": "John Doe"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
           }
         }
       }

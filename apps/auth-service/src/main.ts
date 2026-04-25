@@ -32,7 +32,7 @@ app.get('/docs-json', (req, res) => {
 
 // Routes
 
-app.use('/api', authRouter);
+app.use('/api/v1', authRouter);
 
 app.use(ErrorMiddleware);
 
